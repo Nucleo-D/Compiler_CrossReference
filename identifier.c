@@ -6,7 +6,7 @@
 struct ID *globalidroot, *localidroot;
 
 void init_idtab() { /* Initialise the table */
-//    idroot = NULL;
+                    //    idroot = NULL;
     globalidroot = NULL;
     localidroot = NULL;
 }
@@ -51,25 +51,50 @@ void init_idtab() { /* Initialise the table */
 //    }
 //}
 
-struct ID *search_globalidtab(char *np){
-    struct ID *p;
+struct ID *search_globalidtab(char *np) {
+    struct ID   *p;
+    struct LINE *q;
+
 
     for (p = globalidroot; p != NULL; p = p->nextp) {
-        if (strcmp(np, p->name) == 0) return (p);
+        if (strcmp(np, p->name) == 0) {
+            if ((q = (struct LINE *) malloc(sizeof(struct LINE))) == NULL) {
+                error("can not malloc struct in search_globalidtab\n");
+                return (NULL);
+            }
+            q->reflinenum = get_linenum();
+            struct LINE *r;
+            for (r = p->irefp; r->nextlinep != NULL; r = r->nextlinep)
+                ;
+            r->nextlinep = q;
+            return (p);
+        }
     }
     return (NULL);
 }
 
-struct ID *search_localidtab(char *np, char *procname){
-    struct ID *p;
+struct ID *search_localidtab(char *np, char *procname) {
+    struct ID   *p;
+    struct LINE *q;
 
     for (p = localidroot; p != NULL; p = p->nextp) {
-        if (strcmp(np, p->name) == 0 && strcmp(procname, p->procname) == 0) return (p);
+        if (strcmp(np, p->name) == 0 && strcmp(procname, p->procname) == 0) {
+            if ((q = (struct LINE *) malloc(sizeof(struct LINE))) == NULL) {
+                error("can not malloc struct in search_localidtab\n");
+                return (NULL);
+            }
+            q->reflinenum = get_linenum();
+            struct LINE *r;
+            for (r = p->irefp; r->nextlinep != NULL; r = r->nextlinep)
+                ;
+            r->nextlinep = q;
+            return (p);
+        }
     }
     return (NULL);
 }
 
-void add_idtab(char *np, int ispara, int deflinenum, char *procname){
+void add_idtab(char *np, int ispara, int deflinenum, char *procname) {
     struct ID *p;
 
     if ((p = (struct ID *) malloc(sizeof(struct ID))) == NULL) {
@@ -97,8 +122,8 @@ void add_idtab(char *np, int ispara, int deflinenum, char *procname){
     globalidroot = p;
 }
 
-void add_reflinenum(char *np, int linenum, char *procname){
-    struct ID *p;
+void add_reflinenum(char *np, int linenum, char *procname) {
+    struct ID   *p;
     struct LINE *q;
 
     if ((p = search_globalidtab(np)) != NULL) {
@@ -123,10 +148,10 @@ void add_reflinenum(char *np, int linenum, char *procname){
     }
 }
 
-void add_standard_type(char *np, int type, char *procname){
+void add_standard_type(char *np, int type, char *procname) {
     struct ID *p;
 
-    if ((p = search_globalidtab(np)) != NULL) {
+    if (procname == NULL && (p = search_globalidtab(np)) != NULL) {
         if (p->itp != NULL) {
             error("type is already defined in add_standard_type\n");
             return;
@@ -140,7 +165,7 @@ void add_standard_type(char *np, int type, char *procname){
         p->itp->etp = NULL;
         p->itp->paratp = NULL;
         p->ispara = 0;
-    } else if ((p = search_localidtab(np, procname)) != NULL) {
+    } else if (procname != NULL && (p = search_localidtab(np, procname)) != NULL) {
         if (p->itp != NULL) {
             error("type is already defined in add_standard_type\n");
             return;
@@ -160,7 +185,7 @@ void add_standard_type(char *np, int type, char *procname){
     }
 }
 
-void add_array_type(char *np, int type, int arraysize, char *procname){
+void add_array_type(char *np, int type, int arraysize, char *procname) {
     struct ID *p;
 
     if ((p = search_globalidtab(np)) != NULL) {
@@ -197,7 +222,7 @@ void add_array_type(char *np, int type, int arraysize, char *procname){
     }
 }
 
-void add_procedure_type(char *np){
+void add_procedure_type(char *np) {
     struct ID *p;
 
     if ((p = search_globalidtab(np)) != NULL) {
@@ -220,8 +245,8 @@ void add_procedure_type(char *np){
     }
 }
 
-void add_proceduure_standard_type_parameter(char *np, int type, char *procname){
-    struct ID *p;
+void add_proceduure_standard_type_parameter(char *np, int type, char *procname) {
+    struct ID   *p;
     struct TYPE *q;
 
     if ((p = search_globalidtab(np)) != NULL) {
@@ -246,7 +271,8 @@ void add_proceduure_standard_type_parameter(char *np, int type, char *procname){
             p->itp->paratp = q;
         } else {
             struct TYPE *r;
-            for (r = p->itp->paratp; r->paratp != NULL; r = r->paratp);
+            for (r = p->itp->paratp; r->paratp != NULL; r = r->paratp)
+                ;
             r->paratp = q;
         }
     } else if ((p = search_localidtab(np, procname)) != NULL) {
@@ -271,7 +297,8 @@ void add_proceduure_standard_type_parameter(char *np, int type, char *procname){
             p->itp->paratp = q;
         } else {
             struct TYPE *r;
-            for (r = p->itp->paratp; r->paratp != NULL; r = r->paratp);
+            for (r = p->itp->paratp; r->paratp != NULL; r = r->paratp)
+                ;
             r->paratp = q;
         }
     } else {
@@ -283,11 +310,11 @@ void add_proceduure_standard_type_parameter(char *np, int type, char *procname){
 void release_idtab() { /* Release tha data structure */
     struct ID *p, *q;
 
-//    for (p = idroot; p != NULL; p = q) {
-//        free(p->name);
-//        q = p->nextp;
-//        free(p);
-//    }
+    //    for (p = idroot; p != NULL; p = q) {
+    //        free(p->name);
+    //        q = p->nextp;
+    //        free(p);
+    //    }
     for (p = globalidroot; p != NULL; p = q) {
         free(p->name);
         q = p->nextp;

@@ -9,7 +9,11 @@ char buffer[4096];
 int  tab_num = 0;
 int  can_break = 0;
 int  in_procedure = 0;
+int  in_array = 0;
+int  in_procedure_parameter = 0;
+int  in_variable_declaration = 0;
 char current_procedure_name[MAXSTRSIZE];
+int  current_array_size = 0;
 
 void init_pretty_print() {
     setvbuf(stdout, buffer, _IOFBF, 4096);
@@ -75,11 +79,17 @@ int parse_block() {
 }
 
 int parse_variable_declaration() {
+    in_variable_declaration = 1;
     if (token != TVAR) return (error("Var is not found"));
     printf_with_tab("    var\n");
     printf_with_tab("        ");
     token = scan_loop();
     if (parse_variable_names() == ERROR) return (ERROR);
+    if (in_procedure == 1){
+        if (search_globalidtab(name_attr) != NULL) return (error("Variable name is already defined"));
+    } else {
+        if (search_localidtab(name_attr, current_procedure_name) != NULL) return (error("Variable name is already defined"));
+    }
     if (token != TCOLON) return (error("Colon is not found"));
     printf(" : ");
     token = scan_loop();
@@ -98,6 +108,7 @@ int parse_variable_declaration() {
         printf(";\n");
         token = scan_loop();
     }
+    in_variable_declaration = 0;
     return NORMAL;
 }
 
@@ -115,6 +126,20 @@ int parse_variable_names() {
 
 int parse_variable_name() {
     if (token != TNAME) return (error("Variable name is not found"));
+    add_name(name_attr);
+    if (in_variable_declaration == 1) {
+        if (in_procedure == 1) {
+            add_idtab(name_attr, 0, get_linenum(), current_procedure_name);
+        } else {
+            add_idtab(name_attr, 0, get_linenum(), NULL);
+        }
+    } else {
+        if (in_procedure == 1) {
+            if (search_localidtab(name_attr, current_procedure_name) == NULL) return (error("Variable name is not defined"));
+        } else {
+            if (search_globalidtab(name_attr) == NULL) return (error("Variable name is not defined"));
+        }
+    }
     printf("%s", name_attr);
     token = scan_loop();
     return NORMAL;
@@ -129,7 +154,9 @@ int parse_type() {
             current_array_size = 1;
             break;
         case TARRAY:
+            in_array = 1;
             if (parse_array_type() == ERROR) return (ERROR);
+            in_array = 0;
             break;
         default:
             return (error("Type is not found"));
@@ -139,7 +166,39 @@ int parse_type() {
 
 int parse_standard_type() {
     if (token != TINTEGER && token != TBOOLEAN && token != TCHAR) return (error("Standard type is not found"));
-    current_type = token;
+    if (in_array == 1) {
+        if (token == TINTEGER) {
+            add_array_type(name_attr, TPARRAYINT, current_array_size, current_procedure_name);
+        } else if (token == TBOOLEAN) {
+            add_array_type(name_attr, TPARRAYBOOL, current_array_size, current_procedure_name);
+        } else if (token == TCHAR) {
+            add_array_type(name_attr, TPARRAYCHAR, current_array_size, current_procedure_name);
+        }
+    } else if (in_procedure_parameter == 1) {
+        if (token == TINTEGER) {
+            add_proceduure_standard_type_parameter(name_attr, TPINT, current_procedure_name);
+        } else if (token == TBOOLEAN) {
+            add_proceduure_standard_type_parameter(name_attr, TPBOOL, current_procedure_name);
+        } else if (token == TCHAR) {
+            add_proceduure_standard_type_parameter(name_attr, TPCHAR, current_procedure_name);
+        }
+    } else if(in_procedure == 1){
+        if (token == TINTEGER) {
+            add_standard_type(name_attr, TPINT, current_procedure_name);
+        } else if (token == TBOOLEAN) {
+            add_standard_type(name_attr, TPBOOL, current_procedure_name);
+        } else if (token == TCHAR) {
+            add_standard_type(name_attr, TPCHAR, current_procedure_name);
+        }
+    } else {
+        if (token == TINTEGER) {
+            add_standard_type(name_attr, TPINT, NULL);
+        } else if (token == TBOOLEAN) {
+            add_standard_type(name_attr, TPBOOL, NULL);
+        } else if (token == TCHAR) {
+            add_standard_type(name_attr, TPCHAR, NULL);
+        }
+    }
     printf("%s", tokenstr[token]);
     token = scan_loop();
     return NORMAL;
@@ -152,8 +211,8 @@ int parse_array_type() {
     if (token != TLSQPAREN) return (error("Left square parenthesis is not found"));
     printf(" [ ");
     token = scan_loop();
-    if (token != TNUMBER) return (error("Number is not found"));
     current_array_size = num_attr;
+    if (token != TNUMBER) return (error("Number is not found"));
     printf("%s", num_string_attr);
     token = scan_loop();
     if (token != TRSQPAREN) return (error("Right square parenthesis is not found"));
@@ -172,8 +231,8 @@ int parse_subprogram_declaration() {
     tab_num++;
     printf_with_tab("procedure ");
     token = scan_loop();
-    if (parse_procedure_name() == ERROR) return (ERROR);
     strcpy(current_procedure_name, name_attr);
+    if (parse_procedure_name() == ERROR) return (ERROR);
     if (token == TLPAREN) {
         if (parse_formal_parameters() == ERROR) return (ERROR);
     }
@@ -193,6 +252,9 @@ int parse_subprogram_declaration() {
 }
 
 int parse_procedure_name() {
+    add_name(name_attr);
+    add_idtab(name_attr, 0, get_linenum(), NULL);
+    add_procedure_type(name_attr);
     if (token != TNAME) return (error("Procedure name is not found"));
     printf("%s", name_attr);
     token = scan_loop();
@@ -200,6 +262,7 @@ int parse_procedure_name() {
 }
 
 int parse_formal_parameters() {
+    in_procedure_parameter = 1;
     if (token != TLPAREN) return (error("Left parenthesis is not found"));
     printf(" ( ");
     token = scan_loop();
@@ -221,6 +284,7 @@ int parse_formal_parameters() {
     if (token != TRPAREN) return (error("Right parenthesis is not found"));
     printf(" )");
     token = scan_loop();
+    in_procedure_parameter = 0;
     return NORMAL;
 }
 

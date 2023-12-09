@@ -7,6 +7,7 @@
 
 #include <stdarg.h>
 
+#include "crossRefereencer.h"
 #include "error.h"
 #include "identifier.h"
 #include "scanner.h"
@@ -15,20 +16,22 @@
 #define NORMAL 0
 #define ERROR  1
 
-extern int token;
+extern int  token;
 extern char buffer[4096];
-extern int tab_num;
-extern int can_break;
+extern int  tab_num;
+extern int  can_break;
 
-extern int in_procedure;
+extern int  in_procedure;
+extern int  in_array;
+extern int  in_procedure_parameter;
+extern int  in_variable_declaration;
 extern char current_procedure_name[MAXSTRSIZE];
-extern int current_type;
-extern int current_array_size;
+extern int  current_array_size;
 
 void init_pretty_print();
 void pretty_print();
 void printf_with_tab(char *str, ...);
-int scan_loop(void);
+int  scan_loop(void);
 
 int parse_program();
 int parse_block();
