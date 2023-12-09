@@ -22,6 +22,8 @@ extern int can_break;
 
 extern int in_procedure;
 extern char current_procedure_name[MAXSTRSIZE];
+extern int current_type;
+extern int current_array_size;
 
 void init_pretty_print();
 void pretty_print();

@@ -126,6 +126,7 @@ int parse_type() {
         case TBOOLEAN:
         case TCHAR:
             if (parse_standard_type() == ERROR) return (ERROR);
+            current_array_size = 1;
             break;
         case TARRAY:
             if (parse_array_type() == ERROR) return (ERROR);
@@ -138,6 +139,7 @@ int parse_type() {
 
 int parse_standard_type() {
     if (token != TINTEGER && token != TBOOLEAN && token != TCHAR) return (error("Standard type is not found"));
+    current_type = token;
     printf("%s", tokenstr[token]);
     token = scan_loop();
     return NORMAL;
@@ -151,6 +153,7 @@ int parse_array_type() {
     printf(" [ ");
     token = scan_loop();
     if (token != TNUMBER) return (error("Number is not found"));
+    current_array_size = num_attr;
     printf("%s", num_string_attr);
     token = scan_loop();
     if (token != TRSQPAREN) return (error("Right square parenthesis is not found"));
