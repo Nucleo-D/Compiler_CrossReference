@@ -16,9 +16,10 @@ int main(int nc, char *np[]) {
     }
 
     init_pretty_print();
-    if(parse_program() == NORMAL){
-        pretty_print();
-    }
+//    if(parse_program() == NORMAL){
+//        pretty_print();
+//    }
+
 
     return 0;
 }

@@ -72,7 +72,7 @@ extern struct KEY {
 extern int  num_attr;
 extern char num_string_attr[100];
 extern char string_attr[MAXSTRSIZE];
-extern struct ID *name_attr;
+extern char name_attr[MAXSTRSIZE];
 
 /* Token counter */
 extern int numtoken[NUMOFTOKEN + 1];

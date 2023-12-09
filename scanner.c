@@ -230,8 +230,8 @@ int scan(void) {
         return keyword_num;
     }
 
-    id_countup(str);
-    name_attr = search_idtab(str);
+//    id_countup(str);
+    sprintf(name_attr, "%s", str);
     return TNAME;
 }
 
@@ -243,14 +243,14 @@ void end_scan(void) {
     fclose(fp);
 }
 
-void print_result(void) {
-    if (numtoken[1] > 0) {
-        printf("\"%s\"\t%d\n", tokenstr[1], numtoken[1]);
-        print_idtab();
-    }
-    for (int i = 2; i < NUMOFTOKEN; ++i) {
-        if (numtoken[i] > 0)
-            printf("\"%s\"\t%d\n", tokenstr[i], numtoken[i]);
-    }
-    release_idtab();
-}
+//void print_result(void) {
+//    if (numtoken[1] > 0) {
+//        printf("\"%s\"\t%d\n", tokenstr[1], numtoken[1]);
+//        print_idtab();
+//    }
+//    for (int i = 2; i < NUMOFTOKEN; ++i) {
+//        if (numtoken[i] > 0)
+//            printf("\"%s\"\t%d\n", tokenstr[i], numtoken[i]);
+//    }
+//    release_idtab();
+//}
