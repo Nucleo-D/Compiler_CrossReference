@@ -5,6 +5,13 @@
 #ifndef SCANNER_PRETTYPRINT_H
 #define SCANNER_PRETTYPRINT_H
 
+#include <stdarg.h>
+
+#include "error.h"
+#include "identifier.h"
+#include "scanner.h"
+#include "token.h"
+
 #define NORMAL 0
 #define ERROR  1
 
@@ -12,6 +19,9 @@ extern int token;
 extern char buffer[4096];
 extern int tab_num;
 extern int can_break;
+
+extern int in_procedure;
+extern char current_procedure_name[MAXSTRSIZE];
 
 void init_pretty_print();
 void pretty_print();

@@ -2,6 +2,8 @@
 #include "error.h"
 
 struct ID *idroot;
+/* Pointers to root of global & local symbol tables */
+struct ID *globalidroot, *localidroot;
 
 void init_idtab() { /* Initialise the table */
     idroot = NULL;

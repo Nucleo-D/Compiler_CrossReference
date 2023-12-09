@@ -34,7 +34,7 @@ struct KEY key[KEYWORDSIZE] = {
 
 int  num_attr;
 char string_attr[MAXSTRSIZE];
-struct ID *name_attr;
+char name_attr[MAXSTRSIZE];
 
 /* Token counter */
 int numtoken[NUMOFTOKEN + 1];

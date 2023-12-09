@@ -2,18 +2,14 @@
 // Created by li-xinjia on 23/11/20.
 //
 
-#include <stdarg.h>
-
-#include "error.h"
-#include "identifier.h"
 #include "prettyPrint.h"
-#include "scanner.h"
-#include "token.h"
 
 int  token;
 char buffer[4096];
 int  tab_num = 0;
 int  can_break = 0;
+int  in_procedure = 0;
+char current_procedure_name[MAXSTRSIZE];
 
 void init_pretty_print() {
     setvbuf(stdout, buffer, _IOFBF, 4096);
@@ -49,7 +45,7 @@ int parse_program() {
     printf("program");
     token = scan_loop();
     if (token != TNAME) return (error("Program name is not found"));
-    printf(" %s", name_attr->name);
+    printf(" %s", name_attr);
     token = scan_loop();
     if (token != TSEMI) return (error("Semicolon is not found"));
     printf(";\n");
@@ -119,7 +115,7 @@ int parse_variable_names() {
 
 int parse_variable_name() {
     if (token != TNAME) return (error("Variable name is not found"));
-    printf("%s", name_attr->name);
+    printf("%s", name_attr);
     token = scan_loop();
     return NORMAL;
 }
@@ -169,10 +165,12 @@ int parse_array_type() {
 
 int parse_subprogram_declaration() {
     if (token != TPROCEDURE) return (error("Procedure is not found"));
+    in_procedure = 1;
     tab_num++;
     printf_with_tab("procedure ");
     token = scan_loop();
     if (parse_procedure_name() == ERROR) return (ERROR);
+    strcpy(current_procedure_name, name_attr);
     if (token == TLPAREN) {
         if (parse_formal_parameters() == ERROR) return (ERROR);
     }
@@ -187,12 +185,13 @@ int parse_subprogram_declaration() {
     printf(";\n");
     token = scan_loop();
     tab_num--;
+    in_procedure = 0;
     return NORMAL;
 }
 
 int parse_procedure_name() {
     if (token != TNAME) return (error("Procedure name is not found"));
-    printf("%s", name_attr->name);
+    printf("%s", name_attr);
     token = scan_loop();
     return NORMAL;
 }

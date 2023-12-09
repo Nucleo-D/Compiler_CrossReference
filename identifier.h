@@ -27,7 +27,7 @@ struct ID {
     int deflinenum; /* 定義行 */
     struct LINE *irefp; /* 参照行のリスト */
     struct ID *nextp;
-} *globalidroot, *localidroot; /* Pointers to root of global & local symbol tables */
+};
 
 struct ID *search_idtab(char *np);
 void       init_idtab();
