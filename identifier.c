@@ -139,6 +139,7 @@ void add_standard_type(char *np, int type, char *procname){
         p->itp->arraysize = 0;
         p->itp->etp = NULL;
         p->itp->paratp = NULL;
+        p->ispara = 0;
     } else if ((p = search_localidtab(np, procname)) != NULL) {
         if (p->itp != NULL) {
             error("type is already defined in add_standard_type\n");
@@ -152,6 +153,7 @@ void add_standard_type(char *np, int type, char *procname){
         p->itp->arraysize = 0;
         p->itp->etp = NULL;
         p->itp->paratp = NULL;
+        p->ispara = 0;
     } else {
         error("can not find id in add_standard_type\n");
         return;
@@ -174,6 +176,7 @@ void add_array_type(char *np, int type, int arraysize, char *procname){
         p->itp->arraysize = arraysize;
         p->itp->etp = NULL;
         p->itp->paratp = NULL;
+        p->ispara = 0;
     } else if ((p = search_localidtab(np, procname)) != NULL) {
         if (p->itp != NULL) {
             error("type is already defined in add_array_type\n");
@@ -187,6 +190,7 @@ void add_array_type(char *np, int type, int arraysize, char *procname){
         p->itp->arraysize = arraysize;
         p->itp->etp = NULL;
         p->itp->paratp = NULL;
+        p->ispara = 0;
     } else {
         error("can not find id in add_array_type\n");
         return;
@@ -209,6 +213,7 @@ void add_procedure_type(char *np){
         p->itp->arraysize = 0;
         p->itp->etp = NULL;
         p->itp->paratp = NULL;
+        p->ispara = 0;
     } else {
         error("can not find id in add_procedure_type\n");
         return;
@@ -236,6 +241,7 @@ void add_proceduure_standard_type_parameter(char *np, int type, char *procname){
         q->arraysize = 0;
         q->etp = NULL;
         q->paratp = NULL;
+        p->ispara = 1;
         if (p->itp->paratp == NULL) {
             p->itp->paratp = q;
         } else {
@@ -260,6 +266,7 @@ void add_proceduure_standard_type_parameter(char *np, int type, char *procname){
         q->arraysize = 0;
         q->etp = NULL;
         q->paratp = NULL;
+        p->ispara = 1;
         if (p->itp->paratp == NULL) {
             p->itp->paratp = q;
         } else {
