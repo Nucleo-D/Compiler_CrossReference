@@ -1,0 +1,12 @@
+# CMake
+cmake-build-debug
+
+# Clion
+.idea
+
+# Test
+test
+tc
+
+# Makefile
+obj
