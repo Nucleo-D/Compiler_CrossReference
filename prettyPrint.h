@@ -25,6 +25,12 @@ extern int  in_procedure;
 extern int  in_array;
 extern int  in_procedure_parameter;
 extern int  in_variable_declaration;
+extern int  bool_expression_flag;
+extern int  integer_expression_flag;
+extern int  char_expression_flag;
+extern int  string_expression_flag;
+extern int  in_call_statement;
+extern char current_call_procedure_name[MAXSTRSIZE];
 extern char current_procedure_name[MAXSTRSIZE];
 extern int  current_array_size;
 

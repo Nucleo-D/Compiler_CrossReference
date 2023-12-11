@@ -53,20 +53,10 @@ void init_idtab() { /* Initialise the table */
 
 struct ID *search_globalidtab(char *np) {
     struct ID   *p;
-    struct LINE *q;
-
 
     for (p = globalidroot; p != NULL; p = p->nextp) {
         if (strcmp(np, p->name) == 0) {
-            if ((q = (struct LINE *) malloc(sizeof(struct LINE))) == NULL) {
-                error("can not malloc struct in search_globalidtab\n");
-                return (NULL);
-            }
-            q->reflinenum = get_linenum();
-            struct LINE *r;
-            for (r = p->irefp; r->nextlinep != NULL; r = r->nextlinep)
-                ;
-            r->nextlinep = q;
+            add_reflinenum(np, get_linenum(), NULL);
             return (p);
         }
     }
@@ -75,19 +65,10 @@ struct ID *search_globalidtab(char *np) {
 
 struct ID *search_localidtab(char *np, char *procname) {
     struct ID   *p;
-    struct LINE *q;
 
     for (p = localidroot; p != NULL; p = p->nextp) {
         if (strcmp(np, p->name) == 0 && strcmp(procname, p->procname) == 0) {
-            if ((q = (struct LINE *) malloc(sizeof(struct LINE))) == NULL) {
-                error("can not malloc struct in search_localidtab\n");
-                return (NULL);
-            }
-            q->reflinenum = get_linenum();
-            struct LINE *r;
-            for (r = p->irefp; r->nextlinep != NULL; r = r->nextlinep)
-                ;
-            r->nextlinep = q;
+            add_reflinenum(np, get_linenum(), procname);
             return (p);
         }
     }
@@ -126,7 +107,7 @@ void add_reflinenum(char *np, int linenum, char *procname) {
     struct ID   *p;
     struct LINE *q;
 
-    if ((p = search_globalidtab(np)) != NULL) {
+    if (procname == NULL && (p = search_globalidtab(np)) != NULL) {
         if ((q = (struct LINE *) malloc(sizeof(struct LINE))) == NULL) {
             error("can not malloc struct in add_reflinenum\n");
             return;
@@ -134,7 +115,7 @@ void add_reflinenum(char *np, int linenum, char *procname) {
         q->reflinenum = linenum;
         q->nextlinep = p->irefp;
         p->irefp = q;
-    } else if ((p = search_localidtab(np, procname)) != NULL) {
+    } else if (procname != NULL && (p = search_localidtab(np, procname)) != NULL) {
         if ((q = (struct LINE *) malloc(sizeof(struct LINE))) == NULL) {
             error("can not malloc struct in add_reflinenum\n");
             return;
@@ -148,7 +129,7 @@ void add_reflinenum(char *np, int linenum, char *procname) {
     }
 }
 
-void add_standard_type(char *np, int type, char *procname) {
+void add_standard_type(char *np, int type, char *procname, int ispara) {
     struct ID *p;
 
     if (procname == NULL && (p = search_globalidtab(np)) != NULL) {
@@ -164,7 +145,7 @@ void add_standard_type(char *np, int type, char *procname) {
         p->itp->arraysize = 0;
         p->itp->etp = NULL;
         p->itp->paratp = NULL;
-        p->ispara = 0;
+        p->ispara = ispara;
     } else if (procname != NULL && (p = search_localidtab(np, procname)) != NULL) {
         if (p->itp != NULL) {
             error("type is already defined in add_standard_type\n");
@@ -178,7 +159,7 @@ void add_standard_type(char *np, int type, char *procname) {
         p->itp->arraysize = 0;
         p->itp->etp = NULL;
         p->itp->paratp = NULL;
-        p->ispara = 0;
+        p->ispara = ispara;
     } else {
         error("can not find id in add_standard_type\n");
         return;
@@ -245,62 +226,44 @@ void add_procedure_type(char *np) {
     }
 }
 
-void add_proceduure_standard_type_parameter(char *np, int type, char *procname) {
+void add_proceduure_parameter(char *np, int type, char *procname) {
+    struct ID   *pproc;
     struct ID   *p;
     struct TYPE *q;
 
-    if ((p = search_globalidtab(np)) != NULL) {
-        if (p->itp == NULL) {
+    if ((pproc = search_globalidtab(procname)) != NULL) {
+        if (pproc->itp == NULL) {
             error("type is not defined in add_proceduure_standard_type_parameter\n");
             return;
         }
-        if (p->itp->ttype != TPPROC) {
+        if (pproc->itp->ttype != TPPROC) {
             error("type is not procedure in add_proceduure_standard_type_parameter\n");
+            return;
+        }
+        if ((p = (struct ID *) malloc(sizeof(struct ID))) == NULL) {
+            error("can not malloc struct in add_proceduure_standard_type_parameter\n");
             return;
         }
         if ((q = (struct TYPE *) malloc(sizeof(struct TYPE))) == NULL) {
             error("can not malloc struct in add_proceduure_standard_type_parameter\n");
             return;
         }
+
         q->ttype = type;
         q->arraysize = 0;
         q->etp = NULL;
         q->paratp = NULL;
-        p->ispara = 1;
-        if (p->itp->paratp == NULL) {
-            p->itp->paratp = q;
+
+        if (pproc->itp->paratp == NULL) {
+            pproc->itp->paratp = q;
         } else {
             struct TYPE *r;
-            for (r = p->itp->paratp; r->paratp != NULL; r = r->paratp)
+            for (r = pproc->itp->paratp; r->paratp != NULL; r = r->paratp)
                 ;
             r->paratp = q;
         }
-    } else if ((p = search_localidtab(np, procname)) != NULL) {
-        if (p->itp == NULL) {
-            error("type is not defined in add_proceduure_standard_type_parameter\n");
-            return;
-        }
-        if (p->itp->ttype != TPPROC) {
-            error("type is not procedure in add_proceduure_standard_type_parameter\n");
-            return;
-        }
-        if ((q = (struct TYPE *) malloc(sizeof(struct TYPE))) == NULL) {
-            error("can not malloc struct in add_proceduure_standard_type_parameter\n");
-            return;
-        }
-        q->ttype = type;
-        q->arraysize = 0;
-        q->etp = NULL;
-        q->paratp = NULL;
-        p->ispara = 1;
-        if (p->itp->paratp == NULL) {
-            p->itp->paratp = q;
-        } else {
-            struct TYPE *r;
-            for (r = p->itp->paratp; r->paratp != NULL; r = r->paratp)
-                ;
-            r->paratp = q;
-        }
+
+        add_standard_type(np, type, procname, 1);
     } else {
         error("can not find id in add_proceduure_standard_type_parameter\n");
         return;

@@ -45,10 +45,10 @@ void       init_idtab();
 //void       print_idtab();
 void       add_idtab(char *np, int ispara, int deflinenum, char *procname);
 void       add_reflinenum(char *np, int linenum, char *procname);
-void       add_standard_type(char *np, int type, char *procname);
+void       add_standard_type(char *np, int type, char *procname, int ispara);
 void       add_array_type(char *np, int type, int arraysize, char *procname);
 void       add_procedure_type(char *np);
-void       add_proceduure_standard_type_parameter(char *np, int type, char *procname);
+void       add_proceduure_parameter(char *np, int type, char *procname);
 void       release_idtab();
 
 
