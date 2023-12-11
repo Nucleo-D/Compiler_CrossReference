@@ -49,6 +49,7 @@ void       add_standard_type(char *np, int type, char *procname, int ispara);
 void       add_array_type(char *np, int type, int arraysize, char *procname);
 void       add_procedure_type(char *np);
 void       add_proceduure_parameter(char *np, int type, char *procname);
+struct ID *sort_by_name();
 void       release_idtab();
 
 

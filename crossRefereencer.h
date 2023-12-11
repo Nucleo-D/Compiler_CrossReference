@@ -17,4 +17,6 @@ void add_name(char *name);
 int  get_name(char *name);
 void clear_name_buffer();
 
+void output_cross_reference();
+
 #endif //PRETYPRINTER_CROSSREFEREENCER_H

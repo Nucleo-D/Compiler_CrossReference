@@ -5,6 +5,8 @@
 /* Pointers to root of global & local symbol tables */
 struct ID *globalidroot, *localidroot;
 
+struct ID *sortedidroot;
+
 void init_idtab() { /* Initialise the table */
                     //    idroot = NULL;
     globalidroot = NULL;
@@ -52,7 +54,7 @@ void init_idtab() { /* Initialise the table */
 //}
 
 struct ID *search_globalidtab(char *np) {
-    struct ID   *p;
+    struct ID *p;
 
     for (p = globalidroot; p != NULL; p = p->nextp) {
         if (strcmp(np, p->name) == 0) {
@@ -64,7 +66,7 @@ struct ID *search_globalidtab(char *np) {
 }
 
 struct ID *search_localidtab(char *np, char *procname) {
-    struct ID   *p;
+    struct ID *p;
 
     for (p = localidroot; p != NULL; p = p->nextp) {
         if (strcmp(np, p->name) == 0 && strcmp(procname, p->procname) == 0) {
@@ -289,4 +291,126 @@ void release_idtab() { /* Release tha data structure */
         free(p);
     }
     init_idtab();
+}
+
+struct ID *sort_by_name() {
+    struct ID *p, *q, *r, *s;
+    sortedidroot = NULL;
+    p = globalidroot;
+    q = localidroot;
+
+    if (p != NULL && q != NULL) {
+        if (strcmp(p->name, q->name) < 0) {
+            sortedidroot = p;
+            p = p->nextp;
+        } else {
+            sortedidroot = q;
+            q = q->nextp;
+        }
+    } else if (p != NULL) {
+        sortedidroot = p;
+        p = p->nextp;
+    } else if (q != NULL) {
+        sortedidroot = q;
+        q = q->nextp;
+    } else {
+        return sortedidroot;
+    }
+
+    while (p != NULL && q != NULL) {
+        if (strcmp(p->name, q->name) < 0) {
+            r = p;
+            p = p->nextp;
+        } else if (strcmp(p->name, q->name) > 0){
+            r = q;
+            q = q->nextp;
+        }else{
+            if(strcmp(p->procname, q->procname) < 0) {
+                r = p;
+                p = p->nextp;
+            }else{
+                r = q;
+                q = q->nextp;
+            }
+        }
+        s = sortedidroot;
+        if (strcmp(r->name, s->name) < 0) {
+            r->nextp = s;
+            sortedidroot = r;
+        } else if(strcmp(r->name, s->name) == 0){
+            if(strcmp(r->procname, s->procname) < 0) {
+                r->nextp = s;
+                sortedidroot = r;
+            }
+        }
+        while (s->nextp != NULL) {
+            if (strcmp(r->name, s->nextp->name) < 0) {
+                r->nextp = s->nextp;
+                s->nextp = r;
+                break;
+            } else if(strcmp(r->name, s->nextp->name) == 0){
+                if(strcmp(r->procname, s->nextp->procname) < 0) {
+                    r->nextp = s->nextp;
+                    s->nextp = r;
+                    break;
+                }
+            }
+        }
+    }
+
+    while (p != NULL){
+        r = p;
+        if (strcmp(r->name, s->name) < 0) {
+            r->nextp = s;
+            sortedidroot = r;
+        } else if(strcmp(r->name, s->name) == 0){
+            if(strcmp(r->procname, s->procname) < 0) {
+                r->nextp = s;
+                sortedidroot = r;
+            }
+        }
+        while (s->nextp != NULL) {
+            if (strcmp(r->name, s->nextp->name) < 0) {
+                r->nextp = s->nextp;
+                s->nextp = r;
+                break;
+            } else if(strcmp(r->name, s->nextp->name) == 0){
+                if(strcmp(r->procname, s->nextp->procname) < 0) {
+                    r->nextp = s->nextp;
+                    s->nextp = r;
+                    break;
+                }
+            }
+        }
+        p = p->nextp;
+    }
+
+    while (q != NULL){
+        r = q;
+        if (strcmp(r->name, s->name) < 0) {
+            r->nextp = s;
+            sortedidroot = r;
+        } else if(strcmp(r->name, s->name) == 0){
+            if(strcmp(r->procname, s->procname) < 0) {
+                r->nextp = s;
+                sortedidroot = r;
+            }
+        }
+        while (s->nextp != NULL) {
+            if (strcmp(r->name, s->nextp->name) < 0) {
+                r->nextp = s->nextp;
+                s->nextp = r;
+                break;
+            } else if(strcmp(r->name, s->nextp->name) == 0){
+                if(strcmp(r->procname, s->nextp->procname) < 0) {
+                    r->nextp = s->nextp;
+                    s->nextp = r;
+                    break;
+                }
+            }
+        }
+        q = q->nextp;
+    }
+
+    return sortedidroot;
 }

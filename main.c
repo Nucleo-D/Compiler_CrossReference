@@ -2,6 +2,7 @@
 
 #include "scanner.h"
 #include "prettyPrint.h"
+#include "crossRefereencer.h"
 
 int main(int nc, char *np[]) {
     int token, i;
@@ -16,10 +17,9 @@ int main(int nc, char *np[]) {
     }
 
     init_pretty_print();
-//    if(parse_program() == NORMAL){
-//        pretty_print();
-//    }
-
+    if(parse_program() == NORMAL){
+        output_cross_reference();
+    }
 
     return 0;
 }

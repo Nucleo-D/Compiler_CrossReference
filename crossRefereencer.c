@@ -35,3 +35,106 @@ void clear_name_buffer() {
         free(p);
     }
 }
+
+void output_cross_reference() {
+    struct ID   *p;
+    struct LINE *q;
+    struct TYPE *r;
+    char         name[MAXSTRSIZE];
+    char         para[MAXSTRSIZE];
+    char         line[MAXSTRSIZE];
+    char         number[10];
+
+    FILE *original_stdout = stdout;
+    freopen("/dev/null", "w", stdout);
+    fflush(stdout);
+    fclose(stdout);
+    stdout = original_stdout;
+
+    printf("Name\t|\tType\t|\tDefine\t|\tReferences");
+
+    p = sort_by_name();
+    while (p != NULL) {
+        printf("\n%s\t|\t", p->name);
+        if (p->itp->ttype == TPPROC) {
+            r = p->itp->paratp->paratp;
+            strcpy(para, "");
+            switch (r->ttype) {
+                case TPINT:
+                    sprintf(para, "%s", "int");
+                    break;
+                case TPCHAR:
+                    sprintf(para, "%s", "char");
+                    break;
+                case TPBOOL:
+                    sprintf(para, "%s", "bool");
+                    break;
+                default:
+                    break;
+            }
+            r = r->paratp;
+            while (r != NULL) {
+                switch (r->ttype) {
+                    case TPINT:
+                        strcat(para, ", int");
+                        break;
+                    case TPCHAR:
+                        strcat(para, ", char");
+                        break;
+                    case TPBOOL:
+                        strcat(para, ", bool");
+                        break;
+                    default:
+                        break;
+                }
+                r = r->paratp;
+            }
+        }
+        switch (p->itp->ttype) {
+            case TPINT:
+                printf("int\t|\t");
+                break;
+            case TPCHAR:
+                printf("char\t|\t");
+                break;
+            case TPBOOL:
+                printf("bool\t|\t");
+                break;
+            case TPARRAYINT:
+                printf("array[%d] of integer\t|\t", p->itp->arraysize);
+                break;
+            case TPARRAYCHAR:
+                printf("array[%d] of char\t|\t", p->itp->arraysize);
+                break;
+            case TPARRAYBOOL:
+                printf("array[%d] of boolean\t|\t", p->itp->arraysize);
+                break;
+            case TPPROC:
+                printf("procedure(%s)\t|\t", para);
+                break;
+            default:
+                printf("unknown\t|\t");
+                break;
+        }
+        printf("%d\t|\t", p->deflinenum);
+        q = p->irefp;
+
+        strcpy(line, "");
+        strcpy(number, "");
+        if (q != NULL) {
+            if (get_name(name)) {
+                sprintf(line, "%d", q->reflinenum);
+            }
+            q = q->nextlinep;
+        }
+
+        while (q != NULL) {
+            if (get_name(name)) {
+                sprintf(number, ",%d", q->reflinenum);
+                strcat(line, number);
+            }
+            q = q->nextlinep;
+        }
+        p = p->nextp;
+    }
+}
