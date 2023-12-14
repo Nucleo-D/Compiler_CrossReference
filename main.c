@@ -16,8 +16,8 @@ int main(int nc, char *np[]) {
         return 0;
     }
 
-    init_pretty_print();
-    if(parse_program() == NORMAL){
+    init_cross_reference();
+    if(parse_program_cross() == NORMAL){
         output_cross_reference();
     }
 

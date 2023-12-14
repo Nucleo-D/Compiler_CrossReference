@@ -8,18 +8,6 @@ int  token;
 char buffer[4096];
 int  tab_num = 0;
 int  can_break = 0;
-int  in_procedure = 0;
-int  in_array = 0;
-int  in_procedure_parameter = 0;
-int  in_variable_declaration = 0;
-int  bool_expression_flag = 0;
-int  integer_expression_flag = 0;
-int  char_expression_flag = 0;
-int  string_expression_flag = 0;
-int  in_call_statement = 0;
-char current_call_procedure_name[MAXSTRSIZE];
-char current_procedure_name[MAXSTRSIZE];
-int  current_array_size = 0;
 
 void init_pretty_print() {
     setvbuf(stdout, buffer, _IOFBF, 4096);
@@ -40,14 +28,6 @@ void printf_with_tab(char *str, ...) {
 
     vprintf(str, args);
     va_end(args);
-}
-
-int scan_loop(void) {
-    int result = scan();
-    while (result == 0) {
-        result = scan();
-    }
-    return result;
 }
 
 int parse_program() {
@@ -85,17 +65,11 @@ int parse_block() {
 }
 
 int parse_variable_declaration() {
-    in_variable_declaration = 1;
     if (token != TVAR) return (error("Var is not found"));
     printf_with_tab("    var\n");
     printf_with_tab("        ");
     token = scan_loop();
     if (parse_variable_names() == ERROR) return (ERROR);
-    if (in_procedure == 1) {
-        if (search_globalidtab(name_attr) != NULL) return (error("Variable name is already defined"));
-    } else {
-        if (search_localidtab(name_attr, current_procedure_name) != NULL) return (error("Variable name is already defined"));
-    }
     if (token != TCOLON) return (error("Colon is not found"));
     printf(" : ");
     token = scan_loop();
@@ -114,7 +88,6 @@ int parse_variable_declaration() {
         printf(";\n");
         token = scan_loop();
     }
-    in_variable_declaration = 0;
     return NORMAL;
 }
 
@@ -132,47 +105,6 @@ int parse_variable_names() {
 
 int parse_variable_name() {
     if (token != TNAME) return (error("Variable name is not found"));
-    add_name(name_attr);
-    struct ID *p;
-    if (in_variable_declaration == 1) {
-        if (in_procedure == 1) {
-            add_idtab(name_attr, 0, get_linenum(), current_procedure_name);
-        } else {
-            add_idtab(name_attr, 0, get_linenum(), NULL);
-        }
-    } else {
-        if (in_procedure == 1) {
-            if ((p = search_localidtab(name_attr, current_procedure_name)) == NULL) {
-                if ((p = search_globalidtab(name_attr)) == NULL) return (error("Variable name is not defined"));
-            }
-        } else {
-            if ((p = search_globalidtab(name_attr)) == NULL) return (error("Variable name is not defined"));
-        }
-        switch (p->itp->ttype) {
-            case TPARRAYINT:
-            case TPINT:
-                integer_expression_flag = 1;
-                bool_expression_flag = 0;
-                char_expression_flag = 0;
-                break;
-            case TPCHAR:
-            case TPARRAYCHAR:
-                integer_expression_flag = 0;
-                bool_expression_flag = 0;
-                char_expression_flag = 1;
-                break;
-            case TPBOOL:
-            case TPARRAYBOOL:
-                integer_expression_flag = 0;
-                bool_expression_flag = 1;
-                char_expression_flag = 0;
-                break;
-            case TPPROC:
-                return (error("Wrong type of variable"));
-            default:
-                break;
-        }
-    }
     printf("%s", name_attr);
     token = scan_loop();
     return NORMAL;
@@ -184,12 +116,9 @@ int parse_type() {
         case TBOOLEAN:
         case TCHAR:
             if (parse_standard_type() == ERROR) return (ERROR);
-            current_array_size = 1;
             break;
         case TARRAY:
-            in_array = 1;
             if (parse_array_type() == ERROR) return (ERROR);
-            in_array = 0;
             break;
         default:
             return (error("Type is not found"));
@@ -198,49 +127,7 @@ int parse_type() {
 }
 
 int parse_standard_type() {
-    char nameBuffer[MAXSTRSIZE];
     if (token != TINTEGER && token != TBOOLEAN && token != TCHAR) return (error("Standard type is not found"));
-    if (in_array == 1) {
-        while (get_name(nameBuffer) != 0) {
-            if (token == TINTEGER) {
-                add_array_type(nameBuffer, TPARRAYINT, current_array_size, current_procedure_name);
-            } else if (token == TBOOLEAN) {
-                add_array_type(nameBuffer, TPARRAYBOOL, current_array_size, current_procedure_name);
-            } else if (token == TCHAR) {
-                add_array_type(nameBuffer, TPARRAYCHAR, current_array_size, current_procedure_name);
-            }
-        }
-    } else if (in_procedure_parameter == 1) {
-        while (get_name(nameBuffer) != 0) {
-            if (token == TINTEGER) {
-                add_proceduure_parameter(nameBuffer, TPINT, current_procedure_name);
-            } else if (token == TBOOLEAN) {
-                add_proceduure_parameter(nameBuffer, TPBOOL, current_procedure_name);
-            } else if (token == TCHAR) {
-                add_proceduure_parameter(nameBuffer, TPCHAR, current_procedure_name);
-            }
-        }
-    } else if (in_procedure == 1) {
-        while (get_name(nameBuffer) != 0) {
-            if (token == TINTEGER) {
-                add_standard_type(nameBuffer, TPINT, current_procedure_name, 0);
-            } else if (token == TBOOLEAN) {
-                add_standard_type(nameBuffer, TPBOOL, current_procedure_name, 0);
-            } else if (token == TCHAR) {
-                add_standard_type(nameBuffer, TPCHAR, current_procedure_name, 0);
-            }
-        }
-    } else {
-        while (get_name(nameBuffer) != 0) {
-            if (token == TINTEGER) {
-                add_standard_type(nameBuffer, TPINT, NULL, 0);
-            } else if (token == TBOOLEAN) {
-                add_standard_type(nameBuffer, TPBOOL, NULL, 0);
-            } else if (token == TCHAR) {
-                add_standard_type(nameBuffer, TPCHAR, NULL, 0);
-            }
-        }
-    }
     printf("%s", tokenstr[token]);
     token = scan_loop();
     return NORMAL;
@@ -253,8 +140,6 @@ int parse_array_type() {
     if (token != TLSQPAREN) return (error("Left square parenthesis is not found"));
     printf(" [ ");
     token = scan_loop();
-    current_array_size = num_attr;
-    if (num_attr <= 0) return (error("Array size must be greater than 0"));
     if (token != TNUMBER) return (error("Number is not found"));
     printf("%s", num_string_attr);
     token = scan_loop();
@@ -270,11 +155,9 @@ int parse_array_type() {
 
 int parse_subprogram_declaration() {
     if (token != TPROCEDURE) return (error("Procedure is not found"));
-    in_procedure = 1;
     tab_num++;
     printf_with_tab("procedure ");
     token = scan_loop();
-    strcpy(current_procedure_name, name_attr);
     if (parse_procedure_name() == ERROR) return (ERROR);
     if (token == TLPAREN) {
         if (parse_formal_parameters() == ERROR) return (ERROR);
@@ -290,18 +173,10 @@ int parse_subprogram_declaration() {
     printf(";\n");
     token = scan_loop();
     tab_num--;
-    in_procedure = 0;
     return NORMAL;
 }
 
 int parse_procedure_name() {
-    if (in_call_statement == 1) {
-        search_globalidtab(name_attr);
-    } else {
-        add_name(name_attr);
-        add_idtab(name_attr, 0, get_linenum(), NULL);
-        add_procedure_type(name_attr);
-    }
     if (token != TNAME) return (error("Procedure name is not found"));
     printf("%s", name_attr);
     token = scan_loop();
@@ -309,7 +184,6 @@ int parse_procedure_name() {
 }
 
 int parse_formal_parameters() {
-    in_procedure_parameter = 1;
     if (token != TLPAREN) return (error("Left parenthesis is not found"));
     printf(" ( ");
     token = scan_loop();
@@ -331,7 +205,6 @@ int parse_formal_parameters() {
     if (token != TRPAREN) return (error("Right parenthesis is not found"));
     printf(" )");
     token = scan_loop();
-    in_procedure_parameter = 0;
     return NORMAL;
 }
 
@@ -400,8 +273,6 @@ int parse_condition_statement() {
     token = scan_loop();
     if (token != TLPAREN) printf(" ");
     if (parse_expression() == ERROR) return (ERROR);
-    if (bool_expression_flag == 0) return (error("Expression must be boolean type"));
-    bool_expression_flag = 0;
     if (token != TTHEN) return (error("Then is not found"));
     printf(" then\n");
     token = scan_loop();
@@ -427,8 +298,6 @@ int parse_iteration_statement() {
     token = scan_loop();
     if (!is_symbol(tokenstr[token][0])) printf(" ");
     if (parse_expression() == ERROR) return (ERROR);
-    if (bool_expression_flag == 0) return (error("Expression must be boolean type"));
-    bool_expression_flag = 0;
     if (token != TDO) return (error("Do is not found"));
     printf(" do\n");
     tab_num++;
@@ -451,11 +320,9 @@ int parse_exit_statement() {
 }
 
 int parse_call_statement() {
-    in_call_statement = 1;
     if (token != TCALL) return (error("Call is not found"));
     printf_with_tab("call ");
     token = scan_loop();
-    strcpy(current_call_procedure_name, name_attr);
     if (parse_procedure_name() == ERROR) return (ERROR);
     if (token == TLPAREN) {
         if (token != TLPAREN) return (error("Left parenthesis is not found"));
@@ -466,35 +333,17 @@ int parse_call_statement() {
         printf(" )");
         token = scan_loop();
     }
-    in_call_statement = 0;
     return NORMAL;
 }
 
 int parse_expressions() {
-    struct ID *p = search_globalidtab(current_call_procedure_name);
-    if (p == NULL) return (error("Procedure name is not defined"));
-    struct TYPE *q = p->itp;
-    if (q->ttype != TPPROC) return (error("Procedure name is not defined"));
-    if (q->paratp == NULL) return NORMAL;
-    q = q->paratp;
-    while (q != NULL) {
+    if (parse_expression() == ERROR) return (ERROR);
+    while (token == TCOMMA) {
+        if (token != TCOMMA) return (error("Comma is not found"));
+        printf(" ,");
+        token = scan_loop();
+        if (!is_symbol(tokenstr[token][0])) printf(" ");
         if (parse_expression() == ERROR) return (ERROR);
-        if (bool_expression_flag == 1) {
-            if (q->ttype != TPBOOL) return (error("Expression must be boolean type"));
-        }
-        if (integer_expression_flag == 1) {
-            if (q->ttype != TPINT) return (error("Expression must be integer type"));
-        }
-        if (char_expression_flag == 1) {
-            if (q->ttype != TPCHAR) return (error("Expression must be char type"));
-        }
-        if (q->paratp != NULL) {
-            if (token != TCOMMA) return (error("Comma is not found"));
-            printf(" ,");
-            token = scan_loop();
-            if (!is_symbol(tokenstr[token][0])) printf(" ");
-        }
-        q = q->paratp;
     }
     return NORMAL;
 }
@@ -518,13 +367,6 @@ int parse_assignment_statement() {
 }
 
 int parse_left_part() {
-    if (in_procedure == 1) {
-        if (search_localidtab(name_attr, current_procedure_name) == NULL) {
-            if (search_globalidtab(name_attr) == NULL) return (error("Variable name is not defined"));
-        }
-    } else {
-        if (search_globalidtab(name_attr) == NULL) return (error("Variable name is not defined"));
-    }
     if (parse_variable() == ERROR) return (ERROR);
     return NORMAL;
 }
@@ -536,8 +378,6 @@ int parse_variable() {
         printf(" [ ");
         token = scan_loop();
         if (parse_expression() == ERROR) return (ERROR);
-        if (integer_expression_flag == 0) return (error("Expression must be integer type"));
-        integer_expression_flag = 0;
         if (token != TRSQPAREN) return (error("Right square parenthesis is not found"));
         printf(" ]");
         if (!is_symbol(tokenstr[token][0]) || token == TTHEN) printf(" ");
@@ -551,13 +391,6 @@ int parse_expression() {
     if (token == TEQUAL || token == TNOTEQ || token == TLE || token == TLEEQ || token == TGR || token == TGREQ) {
         if (parse_relational_operator() == ERROR) return (ERROR);
         if (parse_simple_expression() == ERROR) return (ERROR);
-        integer_expression_flag = 0;
-        bool_expression_flag = 1;
-        char_expression_flag = 0;
-    } else {
-        integer_expression_flag = 1;
-        bool_expression_flag = 0;
-        char_expression_flag = 0;
     }
     return NORMAL;
 }
@@ -567,20 +400,8 @@ int parse_simple_expression() {
         if (parse_additive_operator() == ERROR) return (ERROR);
     }
     if (parse_term() == ERROR) return (ERROR);
-    if (integer_expression_flag == 0) return error("Expression must be integer type");
     while (token == TPLUS || token == TMINUS || token == TOR) {
         if (parse_additive_operator() == ERROR) return (ERROR);
-        if (token == TOR) {
-            if (bool_expression_flag == 0) return (error("Expression must be boolean type"));
-            integer_expression_flag = 0;
-            bool_expression_flag = 1;
-            char_expression_flag = 0;
-        } else {
-            if (integer_expression_flag == 0) return (error("Expression must be integer type"));
-            integer_expression_flag = 1;
-            bool_expression_flag = 0;
-            char_expression_flag = 0;
-        }
         if (parse_term() == ERROR) return (ERROR);
     }
     return NORMAL;
@@ -589,17 +410,6 @@ int parse_simple_expression() {
 int parse_term() {
     if (parse_factor() == ERROR) return (ERROR);
     while (token == TSTAR || token == TDIV || token == TAND) {
-        if (token == TAND) {
-            if (bool_expression_flag == 0) return (error("Expression must be boolean type"));
-            integer_expression_flag = 0;
-            bool_expression_flag = 1;
-            char_expression_flag = 0;
-        } else {
-            if (integer_expression_flag == 0) return (error("Expression must be integer type"));
-            integer_expression_flag = 1;
-            bool_expression_flag = 0;
-            char_expression_flag = 0;
-        }
         if (parse_multiplicative_operator() == ERROR) return (ERROR);
         if (parse_factor() == ERROR) return (ERROR);
     }
@@ -628,30 +438,13 @@ int parse_factor() {
             break;
         case TNOT:
             if (token != TNOT) return (error("Not is not found"));
-            if (bool_expression_flag == 0) return (error("Expression must be boolean type"));
             printf("not ");
             token = scan_loop();
             if (parse_factor() == ERROR) return (ERROR);
-            bool_expression_flag = 1;
             break;
         case TINTEGER:
         case TBOOLEAN:
         case TCHAR:
-            if (token == TBOOLEAN) {
-                bool_expression_flag = 1;
-                integer_expression_flag = 0;
-                char_expression_flag = 0;
-            }
-            if (token == TINTEGER) {
-                bool_expression_flag = 0;
-                integer_expression_flag = 1;
-                char_expression_flag = 0;
-            }
-            if (token == TCHAR) {
-                bool_expression_flag = 0;
-                integer_expression_flag = 0;
-                char_expression_flag = 1;
-            }
             if (parse_standard_type() == ERROR) return (ERROR);
             if (token != TLPAREN) return (error("Left parenthesis is not found"));
             printf(" ( ");
@@ -671,33 +464,21 @@ int parse_constant() {
     switch (token) {
         case TNUMBER:
             if (token != TNUMBER) return (error("Number is not found"));
-            integer_expression_flag = 1;
-            bool_expression_flag = 0;
-            char_expression_flag = 0;
             printf("%s", num_string_attr);
             token = scan_loop();
             break;
         case TFALSE:
             if (token != TFALSE) return (error("False is not found"));
-            integer_expression_flag = 0;
-            bool_expression_flag = 1;
-            char_expression_flag = 0;
             printf("false");
             token = scan_loop();
             break;
         case TTRUE:
             if (token != TTRUE) return (error("True is not found"));
-            integer_expression_flag = 0;
-            bool_expression_flag = 1;
-            char_expression_flag = 0;
             printf("true");
             token = scan_loop();
             break;
         case TSTRING:
             if (token != TSTRING) return (error("String is not found"));
-            bool_expression_flag = 0;
-            integer_expression_flag = 0;
-            char_expression_flag = 0;
             printf("\'%s\'", string_attr);
             token = scan_loop();
             break;
@@ -709,32 +490,20 @@ int parse_multiplicative_operator() {
     switch (token) {
         case TSTAR:
             if (token != TSTAR) return (error("Star is not found"));
-            if (integer_expression_flag == 0) return (error("Expression must be integer type"));
             printf(" *");
             token = scan_loop();
-            integer_expression_flag = 1;
-            bool_expression_flag = 0;
-            char_expression_flag = 0;
             if (!is_symbol(tokenstr[token][0])) printf(" ");
             break;
         case TDIV:
             if (token != TDIV) return (error("Div is not found"));
-            if (integer_expression_flag == 0) return (error("Expression must be integer type"));
             printf(" div");
             token = scan_loop();
-            integer_expression_flag = 1;
-            bool_expression_flag = 0;
-            char_expression_flag = 0;
             if (!is_symbol(tokenstr[token][0])) printf(" ");
             break;
         case TAND:
             if (token != TAND) return (error("And is not found"));
-            if (bool_expression_flag == 0) return (error("Expression must be boolean type"));
             printf(" and");
             token = scan_loop();
-            integer_expression_flag = 0;
-            bool_expression_flag = 1;
-            char_expression_flag = 0;
             if (!is_symbol(tokenstr[token][0])) printf(" ");
             break;
         default:
@@ -747,32 +516,20 @@ int parse_additive_operator() {
     switch (token) {
         case TPLUS:
             if (token != TPLUS) return (error("Plus is not found"));
-            if (integer_expression_flag == 0) return (error("Expression must be integer type"));
             printf(" +");
             token = scan_loop();
-            integer_expression_flag = 1;
-            bool_expression_flag = 0;
-            char_expression_flag = 0;
             if (!is_symbol(tokenstr[token][0])) printf(" ");
             break;
         case TMINUS:
             if (token != TMINUS) return (error("Minus is not found"));
-            if (integer_expression_flag == 0) return (error("Expression must be integer type"));
             printf(" -");
             token = scan_loop();
-            integer_expression_flag = 1;
-            bool_expression_flag = 0;
-            char_expression_flag = 0;
             if (!is_symbol(tokenstr[token][0])) printf(" ");
             break;
         case TOR:
             if (token != TOR) return (error("Or is not found"));
-            if (bool_expression_flag == 0) return (error("Expression must be boolean type"));
             printf(" or");
             token = scan_loop();
-            integer_expression_flag = 0;
-            bool_expression_flag = 1;
-            char_expression_flag = 0;
             if (!is_symbol(tokenstr[token][0])) printf(" ");
             break;
         default:
@@ -822,9 +579,6 @@ int parse_relational_operator() {
         default:
             return (error("Relational operator is not found"));
     }
-    integer_expression_flag = 0;
-    bool_expression_flag = 1;
-    char_expression_flag = 0;
     return NORMAL;
 }
 
@@ -837,13 +591,11 @@ int parse_input_statement() {
         printf(" ( ");
         token = scan_loop();
         if (parse_variable() == ERROR) return (ERROR);
-        if (integer_expression_flag != 1 && char_expression_flag != 1) { return (error("Expression must be integer or char type")); }
         while (token == TCOMMA) {
             if (token != TCOMMA) return (error("Comma is not found"));
             printf(" ,");
             token = scan_loop();
             if (!is_symbol(tokenstr[token][0])) printf(" ");
-            if (integer_expression_flag != 1 && char_expression_flag != 1) { return (error("Expression must be integer or char type")); }
             if (parse_variable() == ERROR) return (ERROR);
         }
         if (token != TRPAREN) return (error("Right parenthesis is not found"));
@@ -877,24 +629,19 @@ int parse_output_statement() {
 }
 
 int parse_output_format() {
-    if (token == TPLUS || token == TMINUS || token == TNUMBER || token == TNAME || token == TTRUE || token == TFALSE || token == TLPAREN || token == TNOT || token == TINTEGER || token == TBOOLEAN || token == TCHAR) {
-        if (parse_expression()) { return error("Expression not found"); }
-        if (token == TCOLON) {
-            if (token != TCOLON) return (error("Colon is not found"));
-            printf(" : ");
-            token = scan_loop();
-            if (token != TNUMBER) return (error("Number is not found"));
-            printf("%s", num_string_attr);
-            token = scan_loop();
-        }
-    } else if (token == TSTRING) {
+    if (parse_expression() == ERROR) return (ERROR);
+    if (token == TCOLON) {
+        if (token != TCOLON) return (error("Colon is not found"));
+        printf(" : ");
+        token = scan_loop();
+        if (token != TNUMBER) return (error("Number is not found"));
+        printf("%s", num_string_attr);
+        token = scan_loop();
+    }
+    if (token == TSTRING) {
         if (token != TSTRING) return (error("String is not found"));
         printf("\'%s\'", string_attr);
         token = scan_loop();
-    } else {
-        return (error("Expression or String is not found"));
     }
-
-
     return NORMAL;
 }

@@ -243,14 +243,10 @@ void end_scan(void) {
     fclose(fp);
 }
 
-//void print_result(void) {
-//    if (numtoken[1] > 0) {
-//        printf("\"%s\"\t%d\n", tokenstr[1], numtoken[1]);
-//        print_idtab();
-//    }
-//    for (int i = 2; i < NUMOFTOKEN; ++i) {
-//        if (numtoken[i] > 0)
-//            printf("\"%s\"\t%d\n", tokenstr[i], numtoken[i]);
-//    }
-//    release_idtab();
-//}
+int scan_loop(void) {
+    int result = scan();
+    while (result == 0) {
+        result = scan();
+    }
+    return result;
+}

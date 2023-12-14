@@ -11,6 +11,9 @@
 #include "scanner.h"
 #include <stdio.h>
 
+#define NORMAL 0
+#define ERROR  1
+
 extern int error(char *mes);
 extern void error_scan(char *mes);
 

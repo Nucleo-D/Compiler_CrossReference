@@ -22,6 +22,8 @@ extern int  scan(void);
 extern int  get_linenum(void);
 extern void end_scan(void);
 
+extern int scan_loop(void);
+
 //extern void print_result();
 
 #endif //SCANNER_SCANNER_H
