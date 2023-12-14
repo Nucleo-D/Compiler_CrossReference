@@ -50,4 +50,4 @@ char *tokenstr[NUMOFTOKEN + 1] = {
         ">=", "(", ")", "[", "]", ":=", ".", ",", ":", ";", "read", "write", "break"};
 
 /* Recent token number */
-int line_number = 2;
+int line_number = 1;

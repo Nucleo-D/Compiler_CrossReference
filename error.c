@@ -9,7 +9,8 @@ int error(char *mes) {
     fprintf(stderr, "\nIn line %d : \n ERROR: %s\n", get_linenum(), mes);
     release_idtab();
     end_scan();
-    return ERROR;
+    exit(EXIT_FAILURE);
+//    return ERROR;
 }
 
 void error_scan(char *mes) {

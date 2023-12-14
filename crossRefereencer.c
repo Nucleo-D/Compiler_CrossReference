@@ -40,16 +40,9 @@ void output_cross_reference() {
     struct ID   *p;
     struct LINE *q;
     struct TYPE *r;
-    char         name[MAXSTRSIZE];
     char         para[MAXSTRSIZE];
     char         line[MAXSTRSIZE];
     char         number[10];
-
-    FILE *original_stdout = stdout;
-    freopen("/dev/null", "w", stdout);
-    fflush(stdout);
-    fclose(stdout);
-    stdout = original_stdout;
 
     printf("Name\t|\tType\t|\tDefine\t|\tReferences");
 
@@ -122,17 +115,13 @@ void output_cross_reference() {
         strcpy(line, "");
         strcpy(number, "");
         if (q != NULL) {
-            if (get_name(name)) {
-                sprintf(line, "%d", q->reflinenum);
-            }
+            sprintf(line, "%d", q->reflinenum);
             q = q->nextlinep;
         }
 
         while (q != NULL) {
-            if (get_name(name)) {
-                sprintf(number, ",%d", q->reflinenum);
-                strcat(line, number);
-            }
+            sprintf(number, ",%d", q->reflinenum);
+            strcat(line, number);
             q = q->nextlinep;
         }
         p = p->nextp;
