@@ -44,7 +44,7 @@ void       init_idtab();
 //void       id_countup(char *np);
 //void       print_idtab();
 void       add_idtab(char *np, int ispara, int deflinenum, char *procname);
-void       add_reflinenum(char *np, int linenum, char *procname);
+void       add_reflinenum(struct ID *p, int linenum);
 void       add_standard_type(char *np, int type, char *procname, int ispara);
 void       add_array_type(char *np, int type, int arraysize, char *procname);
 void       add_procedure_type(char *np);

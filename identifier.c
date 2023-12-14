@@ -60,7 +60,7 @@ struct ID *search_globalidtab(char *np) {
 
     for (p = globalidroot; p != NULL; p = p->nextp) {
         if (strcmp(np, p->name) == 0) {
-            add_reflinenum(np, get_linenum(), NULL);
+            add_reflinenum(p, get_linenum());
             return (p);
         }
     }
@@ -72,7 +72,7 @@ struct ID *search_localidtab(char *np, char *procname) {
 
     for (p = localidroot; p != NULL; p = p->nextp) {
         if (strcmp(np, p->name) == 0 && strcmp(procname, p->procname) == 0) {
-            add_reflinenum(np, get_linenum(), procname);
+            add_reflinenum(p, get_linenum());
             return (p);
         }
     }
@@ -107,27 +107,26 @@ void add_idtab(char *np, int ispara, int deflinenum, char *procname) {
     globalidroot = p;
 }
 
-void add_reflinenum(char *np, int linenum, char *procname) {
-    struct ID   *p;
-    struct LINE *q;
-
-    if (procname == NULL) {
-
-    } else {
-        if ((p = search_localidtab(np, procname)) != NULL) {
-            if ((q = (struct LINE *) malloc(sizeof(struct LINE))) == NULL) {
-                error("can not malloc struct in add_reflinenum\n");
-                return;
-            }
-            q->reflinenum = linenum;
-            q->nextlinep = p->irefp;
-            p->irefp = q;
-        } else {
-            error("can not find id in add_reflinenum\n");
+void add_reflinenum(struct ID *p, int linenum) {
+    struct LINE *q = p->irefp;
+    if (q == NULL) {
+        if ((p->irefp = (struct LINE *) malloc(sizeof(struct LINE))) == NULL) {
+            error("can not malloc struct in add_reflinenum\n");
             return;
         }
+        p->irefp->reflinenum = linenum;
+        return;
     }
+    while (q->nextlinep != NULL) {
+        q = q->nextlinep;
+    }
+    if ((q->nextlinep = (struct LINE *) malloc(sizeof(struct LINE))) == NULL) {
+        error("can not malloc struct in add_reflinenum\n");
+        return;
+    }
+    q->nextlinep->reflinenum = linenum;
 }
+
 void add_standard_type(char *np, int type, char *procname, int ispara) {
     struct ID *p;
 

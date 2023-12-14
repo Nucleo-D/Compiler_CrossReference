@@ -145,6 +145,7 @@ void output_cross_reference() {
             strcat(line, number);
             q = q->nextlinep;
         }
+        printf("%s", line);
         p = p->nextp;
     }
 }
@@ -552,13 +553,13 @@ int parse_assignment_statement_cross() {
 }
 
 int parse_left_part_cross() {
-    if (in_procedure == 1) {
-        if (search_localidtab(name_attr, current_procedure_name) == NULL) {
-            if (search_globalidtab(name_attr) == NULL) return (error("Variable name is not defined"));
-        }
-    } else {
-        if (search_globalidtab(name_attr) == NULL) return (error("Variable name is not defined"));
-    }
+//    if (in_procedure == 1) {
+//        if (search_localidtab(name_attr, current_procedure_name) == NULL) {
+//            if (search_globalidtab(name_attr) == NULL) return (error("Variable name is not defined"));
+//        }
+//    } else {
+//        if (search_globalidtab(name_attr) == NULL) return (error("Variable name is not defined"));
+//    }
     if (parse_variable_cross() == ERROR) return (ERROR);
     return NORMAL;
 }
