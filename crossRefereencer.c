@@ -6,8 +6,8 @@
 
 struct NAME_BUFFER *name_buffer_root;
 
-int  cross_token;
-int  cross_can_break = 0;
+int cross_token;
+int cross_can_break = 0;
 
 int  in_procedure = 0;
 int  in_array = 0;
@@ -181,15 +181,11 @@ int parse_block_cross() {
 }
 
 int parse_variable_declaration_cross() {
+    struct ID *p;
     in_variable_declaration = 1;
     if (cross_token != TVAR) return (error("Var is not found"));
     cross_token = scan_loop();
     if (parse_variable_names_cross() == ERROR) return (ERROR);
-    if (in_procedure == 1) {
-        if (search_globalidtab(name_attr) != NULL) return (error("Variable name is already defined"));
-    } else {
-        if (search_localidtab(name_attr, current_procedure_name) != NULL) return (error("Variable name is already defined"));
-    }
     if (cross_token != TCOLON) return (error("Colon is not found"));
     cross_token = scan_loop();
     if (parse_type_cross() == ERROR) return (ERROR);
@@ -208,10 +204,20 @@ int parse_variable_declaration_cross() {
 }
 
 int parse_variable_names_cross() {
+    if (in_procedure == 1) {
+        if (search_localidtab(name_attr, current_procedure_name) != NULL) return (error("Variable name is already defined"));
+    } else {
+        if (search_globalidtab(name_attr) != NULL) return (error("Variable name is already defined"));
+    }
     if (parse_variable_name_cross() == ERROR) return (ERROR);
     while (cross_token == TCOMMA) {
         if (cross_token != TCOMMA) return (error("Comma is not found"));
         cross_token = scan_loop();
+        if (in_procedure == 1) {
+            if (search_localidtab(name_attr, current_procedure_name) != NULL) return (error("Variable name is already defined"));
+        } else {
+            if (search_globalidtab(name_attr) != NULL) return (error("Variable name is already defined"));
+        }
         if (parse_variable_name_cross() == ERROR) return (ERROR);
     }
     return NORMAL;
@@ -221,7 +227,7 @@ int parse_variable_name_cross() {
     if (cross_token != TNAME) return (error("Variable name is not found"));
     add_name(name_attr);
     struct ID *p;
-    if (in_variable_declaration == 1) {
+    if (in_variable_declaration == 1 || in_procedure_parameter == 1) {
         if (in_procedure == 1) {
             add_idtab(name_attr, 0, get_linenum(), current_procedure_name);
         } else {
@@ -373,7 +379,6 @@ int parse_procedure_name_cross() {
     if (in_call_statement == 1) {
         search_globalidtab(name_attr);
     } else {
-        add_name(name_attr);
         add_idtab(name_attr, 0, get_linenum(), NULL);
         add_procedure_type(name_attr);
     }
@@ -553,13 +558,13 @@ int parse_assignment_statement_cross() {
 }
 
 int parse_left_part_cross() {
-//    if (in_procedure == 1) {
-//        if (search_localidtab(name_attr, current_procedure_name) == NULL) {
-//            if (search_globalidtab(name_attr) == NULL) return (error("Variable name is not defined"));
-//        }
-//    } else {
-//        if (search_globalidtab(name_attr) == NULL) return (error("Variable name is not defined"));
-//    }
+    //    if (in_procedure == 1) {
+    //        if (search_localidtab(name_attr, current_procedure_name) == NULL) {
+    //            if (search_globalidtab(name_attr) == NULL) return (error("Variable name is not defined"));
+    //        }
+    //    } else {
+    //        if (search_globalidtab(name_attr) == NULL) return (error("Variable name is not defined"));
+    //    }
     if (parse_variable_cross() == ERROR) return (ERROR);
     return NORMAL;
 }

@@ -91,7 +91,7 @@ void add_idtab(char *np, int ispara, int deflinenum, char *procname) {
         return;
     }
     strcpy(p->name, np);
-    if (p->procname != NULL) {
+    if (procname != NULL) {
         if ((p->procname = (char *) malloc(strlen(procname) + 1)) == NULL) {
             error("can not malloc procname in add_idtab\n");
             return;
@@ -103,8 +103,14 @@ void add_idtab(char *np, int ispara, int deflinenum, char *procname) {
     p->ispara = ispara;
     p->deflinenum = deflinenum;
     p->irefp = NULL;
-    p->nextp = globalidroot;
-    globalidroot = p;
+
+    if(procname == NULL){
+        p->nextp = globalidroot;
+        globalidroot = p;
+    } else{
+        p->nextp = localidroot;
+        localidroot = p;
+    }
 }
 
 void add_reflinenum(struct ID *p, int linenum) {
