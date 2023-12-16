@@ -69,50 +69,56 @@ void output_cross_reference() {
 
     p = sort_by_name();
     while (p != NULL) {
-        printf("\n%s\t|\t", p->name);
+        if (p->procname == NULL){
+            printf("\n%s\t|\t", p->name);
+        } else{
+            printf("\n%s:%s\t|\t", p->name, p->procname);
+        }
         if (p->itp->ttype == TPPROC) {
-            r = p->itp->paratp->paratp;
             strcpy(para, "");
-            switch (r->ttype) {
-                case TPINT:
-                    sprintf(para, "%s", "int");
-                    break;
-                case TPCHAR:
-                    sprintf(para, "%s", "char");
-                    break;
-                case TPBOOL:
-                    sprintf(para, "%s", "bool");
-                    break;
-                default:
-                    break;
-            }
-            r = r->paratp;
-            while (r != NULL) {
+            if (p->itp->paratp != NULL) {
+                r = p->itp->paratp;
                 switch (r->ttype) {
                     case TPINT:
-                        strcat(para, ", int");
+                        sprintf(para, "%s", "integer");
                         break;
                     case TPCHAR:
-                        strcat(para, ", char");
+                        sprintf(para, "%s", "char");
                         break;
                     case TPBOOL:
-                        strcat(para, ", bool");
+                        sprintf(para, "%s", "boolean");
                         break;
                     default:
                         break;
                 }
                 r = r->paratp;
+                while (r != NULL) {
+                    switch (r->ttype) {
+                        case TPINT:
+                            strcat(para, ", integer");
+                            break;
+                        case TPCHAR:
+                            strcat(para, ", char");
+                            break;
+                        case TPBOOL:
+                            strcat(para, ", boolean");
+                            break;
+                        default:
+                            break;
+                    }
+                    r = r->paratp;
+                }
             }
         }
         switch (p->itp->ttype) {
             case TPINT:
-                printf("int\t|\t");
+                printf("integer\t|\t");
                 break;
             case TPCHAR:
                 printf("char\t|\t");
                 break;
             case TPBOOL:
-                printf("bool\t|\t");
+                printf("boolean\t|\t");
                 break;
             case TPARRAYINT:
                 printf("array[%d] of integer\t|\t", p->itp->arraysize);
@@ -124,7 +130,11 @@ void output_cross_reference() {
                 printf("array[%d] of boolean\t|\t", p->itp->arraysize);
                 break;
             case TPPROC:
-                printf("procedure(%s)\t|\t", para);
+                if (strcmp(para, "") != 0){
+                    printf("procedure(%s)\t|\t", para);
+                } else{
+                    printf("procedure\t|\t");
+                }
                 break;
             default:
                 printf("unknown\t|\t");
@@ -205,18 +215,18 @@ int parse_variable_declaration_cross() {
 
 int parse_variable_names_cross() {
     if (in_procedure == 1) {
-        if (search_localidtab(name_attr, current_procedure_name) != NULL) return (error("Variable name is already defined"));
+        if (search_localidtab(name_attr, current_procedure_name, 1) != NULL) return (error("Variable name is already defined"));
     } else {
-        if (search_globalidtab(name_attr) != NULL) return (error("Variable name is already defined"));
+        if (search_globalidtab(name_attr, 1) != NULL) return (error("Variable name is already defined"));
     }
     if (parse_variable_name_cross() == ERROR) return (ERROR);
     while (cross_token == TCOMMA) {
         if (cross_token != TCOMMA) return (error("Comma is not found"));
         cross_token = scan_loop();
         if (in_procedure == 1) {
-            if (search_localidtab(name_attr, current_procedure_name) != NULL) return (error("Variable name is already defined"));
+            if (search_localidtab(name_attr, current_procedure_name, 1) != NULL) return (error("Variable name is already defined"));
         } else {
-            if (search_globalidtab(name_attr) != NULL) return (error("Variable name is already defined"));
+            if (search_globalidtab(name_attr, 1) != NULL) return (error("Variable name is already defined"));
         }
         if (parse_variable_name_cross() == ERROR) return (ERROR);
     }
@@ -225,9 +235,9 @@ int parse_variable_names_cross() {
 
 int parse_variable_name_cross() {
     if (cross_token != TNAME) return (error("Variable name is not found"));
-    add_name(name_attr);
     struct ID *p;
     if (in_variable_declaration == 1 || in_procedure_parameter == 1) {
+        add_name(name_attr);
         if (in_procedure == 1) {
             add_idtab(name_attr, 0, get_linenum(), current_procedure_name);
         } else {
@@ -235,11 +245,11 @@ int parse_variable_name_cross() {
         }
     } else {
         if (in_procedure == 1) {
-            if ((p = search_localidtab(name_attr, current_procedure_name)) == NULL) {
-                if ((p = search_globalidtab(name_attr)) == NULL) return (error("Variable name is not defined"));
+            if ((p = search_localidtab(name_attr, current_procedure_name, 1)) == NULL) {
+                if ((p = search_globalidtab(name_attr, 1)) == NULL) return (error("Variable name is not defined"));
             }
         } else {
-            if ((p = search_globalidtab(name_attr)) == NULL) return (error("Variable name is not defined"));
+            if ((p = search_globalidtab(name_attr, 1)) == NULL) return (error("Variable name is not defined"));
         }
         switch (p->itp->ttype) {
             case TPARRAYINT:
@@ -376,8 +386,12 @@ int parse_subprogram_declaration_cross() {
 }
 
 int parse_procedure_name_cross() {
+    struct ID *p;
     if (in_call_statement == 1) {
-        search_globalidtab(name_attr);
+        p = search_globalidtab(name_attr, 1);
+        if (in_procedure == 1 && strcmp(current_procedure_name, p->name) == 0) {
+            return error("Recursive call is not allowed");
+        }
     } else {
         add_idtab(name_attr, 0, get_linenum(), NULL);
         add_procedure_type(name_attr);
@@ -517,7 +531,7 @@ int parse_call_statement_cross() {
 }
 
 int parse_expressions_cross() {
-    struct ID *p = search_globalidtab(current_call_procedure_name);
+    struct ID *p = search_globalidtab(current_call_procedure_name, 0);
     if (p == NULL) return (error("Procedure name is not defined"));
     struct TYPE *q = p->itp;
     if (q->ttype != TPPROC) return (error("Procedure name is not defined"));
@@ -571,6 +585,9 @@ int parse_left_part_cross() {
 
 int parse_variable_cross() {
     if (parse_variable_name_cross() == ERROR) return (ERROR);
+    int integer_expression_flag_buffer = integer_expression_flag;
+    int bool_expression_flag_buffer = bool_expression_flag;
+    int char_expression_flag_buffer = char_expression_flag;
     while (cross_token == TLSQPAREN) {
         if (cross_token != TLSQPAREN) return (error("Left square parenthesis is not found"));
         cross_token = scan_loop();
@@ -580,6 +597,9 @@ int parse_variable_cross() {
         if (cross_token != TRSQPAREN) return (error("Right square parenthesis is not found"));
         cross_token = scan_loop();
     }
+    integer_expression_flag = integer_expression_flag_buffer;
+    bool_expression_flag = bool_expression_flag_buffer;
+    char_expression_flag = char_expression_flag_buffer;
     return NORMAL;
 }
 
@@ -591,33 +611,36 @@ int parse_expression_cross() {
         integer_expression_flag = 0;
         bool_expression_flag = 1;
         char_expression_flag = 0;
-    } else {
-        integer_expression_flag = 1;
-        bool_expression_flag = 0;
-        char_expression_flag = 0;
     }
     return NORMAL;
 }
 
 int parse_simple_expression_cross() {
+    int operator_flag = 0;
     if (cross_token == TPLUS || cross_token == TMINUS) {
         if (parse_additive_operator_cross() == ERROR) return (ERROR);
+        operator_flag = 1;
     }
     if (parse_term_cross() == ERROR) return (ERROR);
-    if (integer_expression_flag == 0) return error("Expression must be integer type");
+    if (operator_flag == 1) {
+        if (integer_expression_flag == 0) return (error("Expression must be integer type"));
+        integer_expression_flag = 1;
+        bool_expression_flag = 0;
+        char_expression_flag = 0;
+    }
     while (cross_token == TPLUS || cross_token == TMINUS || cross_token == TOR) {
-        if (parse_additive_operator_cross() == ERROR) return (ERROR);
         if (cross_token == TOR) {
             if (bool_expression_flag == 0) return (error("Expression must be boolean type"));
             integer_expression_flag = 0;
             bool_expression_flag = 1;
             char_expression_flag = 0;
         } else {
-            if (integer_expression_flag == 0) return (error("Expression must be integer type"));
+            if (integer_expression_flag == 0 && char_expression_flag == 0) return (error("Expression must be integer or char type"));
             integer_expression_flag = 1;
             bool_expression_flag = 0;
             char_expression_flag = 0;
         }
+        if (parse_additive_operator_cross() == ERROR) return (ERROR);
         if (parse_term_cross() == ERROR) return (ERROR);
     }
     return NORMAL;
@@ -726,7 +749,11 @@ int parse_constant_cross() {
             if (cross_token != TSTRING) return (error("String is not found"));
             bool_expression_flag = 0;
             integer_expression_flag = 0;
-            char_expression_flag = 0;
+            if (strlen(string_attr) == 1) {
+                char_expression_flag = 1;
+            } else {
+                char_expression_flag = 0;
+            }
             cross_token = scan_loop();
             break;
     }

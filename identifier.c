@@ -51,7 +51,7 @@ void init_idtab() { /* Initialise the table */
 //    }
 //}
 
-struct ID *search_globalidtab(char *np) {
+struct ID *search_globalidtab(char *np, int ifcount) {
     struct ID *p;
 
     if (np == NULL) {
@@ -60,19 +60,19 @@ struct ID *search_globalidtab(char *np) {
 
     for (p = globalidroot; p != NULL; p = p->nextp) {
         if (strcmp(np, p->name) == 0) {
-            add_reflinenum(p, get_linenum());
+            if (ifcount == 1) { add_reflinenum(p, get_linenum()); }
             return (p);
         }
     }
     return (NULL);
 }
 
-struct ID *search_localidtab(char *np, char *procname) {
+struct ID *search_localidtab(char *np, char *procname, int ifcount) {
     struct ID *p;
 
     for (p = localidroot; p != NULL; p = p->nextp) {
         if (strcmp(np, p->name) == 0 && strcmp(procname, p->procname) == 0) {
-            add_reflinenum(p, get_linenum());
+            if (ifcount == 1) { add_reflinenum(p, get_linenum()); }
             return (p);
         }
     }
@@ -104,10 +104,10 @@ void add_idtab(char *np, int ispara, int deflinenum, char *procname) {
     p->deflinenum = deflinenum;
     p->irefp = NULL;
 
-    if(procname == NULL){
+    if (procname == NULL) {
         p->nextp = globalidroot;
         globalidroot = p;
-    } else{
+    } else {
         p->nextp = localidroot;
         localidroot = p;
     }
@@ -195,21 +195,16 @@ void add_standard_type(char *np, int type, char *procname, int ispara) {
 void add_array_type(char *np, int type, int arraysize, char *procname) {
     struct ID *p;
 
-    if ((p = search_globalidtab(np)) != NULL) {
-        if (p->itp != NULL) {
-            error("type is already defined in add_array_type\n");
+    if (procname == NULL) {
+        for (p = globalidroot; p != NULL; p = p->nextp) {
+            if (strcmp(np, p->name) == 0) {
+                break;
+            }
+        }
+        if (p == NULL) {
+            error("can not find id in add_standard_type\n");
             return;
         }
-        if ((p->itp = (struct TYPE *) malloc(sizeof(struct TYPE))) == NULL) {
-            error("can not malloc struct in add_array_type\n");
-            return;
-        }
-        p->itp->ttype = type;
-        p->itp->arraysize = arraysize;
-        p->itp->etp = NULL;
-        p->itp->paratp = NULL;
-        p->ispara = 0;
-    } else if ((p = search_localidtab(np, procname)) != NULL) {
         if (p->itp != NULL) {
             error("type is already defined in add_array_type\n");
             return;
@@ -224,32 +219,56 @@ void add_array_type(char *np, int type, int arraysize, char *procname) {
         p->itp->paratp = NULL;
         p->ispara = 0;
     } else {
-        error("can not find id in add_array_type\n");
-        return;
+        for (p = localidroot; p != NULL; p = p->nextp) {
+            if (strcmp(np, p->name) == 0 && strcmp(procname, p->procname) == 0) {
+                break;
+            }
+        }
+        if (p == NULL) {
+            for (p = globalidroot; p != NULL; p = p->nextp) {
+                if (strcmp(np, p->name) == 0) {
+                    break;
+                }
+            }
+        }
+
+        if (p->itp != NULL) {
+            error("type is already defined in add_array_type\n");
+            return;
+        }
+        if ((p->itp = (struct TYPE *) malloc(sizeof(struct TYPE))) == NULL) {
+            error("can not malloc struct in add_array_type\n");
+            return;
+        }
+        p->itp->ttype = type;
+        p->itp->arraysize = arraysize;
+        p->itp->etp = NULL;
+        p->itp->paratp = NULL;
+        p->ispara = 0;
     }
 }
 
 void add_procedure_type(char *np) {
     struct ID *p;
 
-    if ((p = search_globalidtab(np)) != NULL) {
-        if (p->itp != NULL) {
-            error("type is already defined in add_procedure_type\n");
-            return;
+    for (p = globalidroot; p != NULL; p = p->nextp) {
+        if (strcmp(np, p->name) == 0) {
+            break;
         }
-        if ((p->itp = (struct TYPE *) malloc(sizeof(struct TYPE))) == NULL) {
-            error("can not malloc struct in add_procedure_type\n");
-            return;
-        }
-        p->itp->ttype = TPPROC;
-        p->itp->arraysize = 0;
-        p->itp->etp = NULL;
-        p->itp->paratp = NULL;
-        p->ispara = 0;
-    } else {
-        error("can not find id in add_procedure_type\n");
+    }
+    if (p == NULL) {
+        error("can not find id in add_standard_type\n");
         return;
     }
+    if ((p->itp = (struct TYPE *) malloc(sizeof(struct TYPE))) == NULL) {
+        error("can not malloc struct in add_procedure_type\n");
+        return;
+    }
+    p->itp->ttype = TPPROC;
+    p->itp->arraysize = 0;
+    p->itp->etp = NULL;
+    p->itp->paratp = NULL;
+    p->ispara = 0;
 }
 
 void add_proceduure_parameter(char *np, int type, char *procname) {
@@ -257,43 +276,48 @@ void add_proceduure_parameter(char *np, int type, char *procname) {
     struct ID   *p;
     struct TYPE *q;
 
-    if ((pproc = search_globalidtab(procname)) != NULL) {
-        if (pproc->itp == NULL) {
-            error("type is not defined in add_proceduure_standard_type_parameter\n");
-            return;
-        }
-        if (pproc->itp->ttype != TPPROC) {
-            error("type is not procedure in add_proceduure_standard_type_parameter\n");
-            return;
-        }
-        if ((p = (struct ID *) malloc(sizeof(struct ID))) == NULL) {
-            error("can not malloc struct in add_proceduure_standard_type_parameter\n");
-            return;
-        }
-        if ((q = (struct TYPE *) malloc(sizeof(struct TYPE))) == NULL) {
-            error("can not malloc struct in add_proceduure_standard_type_parameter\n");
-            return;
-        }
 
-        q->ttype = type;
-        q->arraysize = 0;
-        q->etp = NULL;
-        q->paratp = NULL;
-
-        if (pproc->itp->paratp == NULL) {
-            pproc->itp->paratp = q;
-        } else {
-            struct TYPE *r;
-            for (r = pproc->itp->paratp; r->paratp != NULL; r = r->paratp)
-                ;
-            r->paratp = q;
+    for (pproc = globalidroot; pproc != NULL; pproc = pproc->nextp) {
+        if (strcmp(procname, pproc->name) == 0) {
+            break;
         }
-
-        add_standard_type(np, type, procname, 1);
-    } else {
-        error("can not find id in add_proceduure_standard_type_parameter\n");
+    }
+    if (pproc == NULL) {
+        error("can not find proc in add_proceduure_standard_type_parameter\n");
         return;
     }
+    if (pproc->itp == NULL) {
+        error("type is not defined in add_proceduure_standard_type_parameter\n");
+        return;
+    }
+    if (pproc->itp->ttype != TPPROC) {
+        error("type is not procedure in add_proceduure_standard_type_parameter\n");
+        return;
+    }
+    if ((p = (struct ID *) malloc(sizeof(struct ID))) == NULL) {
+        error("can not malloc struct in add_proceduure_standard_type_parameter\n");
+        return;
+    }
+    if ((q = (struct TYPE *) malloc(sizeof(struct TYPE))) == NULL) {
+        error("can not malloc struct in add_proceduure_standard_type_parameter\n");
+        return;
+    }
+
+    q->ttype = type;
+    q->arraysize = 0;
+    q->etp = NULL;
+    q->paratp = NULL;
+
+    if (pproc->itp->paratp == NULL) {
+        pproc->itp->paratp = q;
+    } else {
+        struct TYPE *r;
+        for (r = pproc->itp->paratp; r->paratp != NULL; r = r->paratp)
+            ;
+        r->paratp = q;
+    }
+
+    add_standard_type(np, type, procname, 1);
 }
 
 void release_idtab() { /* Release tha data structure */
@@ -323,10 +347,18 @@ struct ID *sort_by_name() {
     struct ID *combinedidroot = NULL;
     struct ID *p, *q, *r;
 
-    for (p = globalidroot; p->nextp != NULL; p = p->nextp)
-        ;
-    p->nextp = localidroot;
-    combinedidroot = globalidroot;
+    if (globalidroot != NULL) {
+        for (p = globalidroot; p->nextp != NULL; p = p->nextp)
+            ;
+        p->nextp = localidroot;
+        combinedidroot = globalidroot;
+    } else {
+        combinedidroot = localidroot;
+    }
+
+    if (combinedidroot == NULL) {
+        return NULL;
+    }
 
     // Sort by name and put into sortedidroot
     sortedidroot = combinedidroot;

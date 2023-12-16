@@ -230,7 +230,7 @@ int scan(void) {
         return keyword_num;
     }
 
-//    id_countup(str);
+    //    id_countup(str);
     sprintf(name_attr, "%s", str);
     return TNAME;
 }

@@ -38,8 +38,8 @@ struct ID {
 };
 
 //struct ID *search_idtab(char *np);
-struct ID *search_globalidtab(char *np);
-struct ID *search_localidtab(char *np, char *procname);
+struct ID *search_globalidtab(char *np, int ifcount);
+struct ID *search_localidtab(char *np, char *procname, int ifcount);
 void       init_idtab();
 //void       id_countup(char *np);
 //void       print_idtab();
